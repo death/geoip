@@ -170,13 +170,15 @@
          (country-blocks (geolite2-database-country-blocks-ipv4 database))
          (cb-index (lower-bound ipv4-address country-blocks :key #'cb-network-end)))
     (when (< cb-index (length country-blocks))
-      (setf the-cb (aref country-blocks cb-index))
-      (let ((country-id (or (cb-represented-country-geoname-id the-cb)
-                            (cb-registered-country-geoname-id the-cb))))
-        (when country-id
-          (let ((country-locations (geolite2-database-country-locations database)))
-            (setf the-cl (binary-search country-id country-locations :key #'cl-geoname-id))
-            (when the-cl
-              (setf the-country-iso-code (cl-country-iso-code the-cl))
-              (setf the-country-name (cl-country-name the-cl)))))))
+      (let ((cb (aref country-blocks cb-index)))
+        (when (>= ipv4-address (cb-network-start cb))
+          (setf the-cb cb)
+          (let ((country-id (or (cb-represented-country-geoname-id the-cb)
+                                (cb-registered-country-geoname-id the-cb))))
+            (when country-id
+              (let ((country-locations (geolite2-database-country-locations database)))
+                (setf the-cl (binary-search country-id country-locations :key #'cl-geoname-id))
+                (when the-cl
+                  (setf the-country-iso-code (cl-country-iso-code the-cl))
+                  (setf the-country-name (cl-country-name the-cl)))))))))
     (values the-country-iso-code the-country-name the-cb the-cl)))
