@@ -19,7 +19,11 @@
    #:lower-bound
    #:binary-search)
   (:export
-   #:geoip))
+   #:geoip-database
+   #:geoip-lookup-country-ipv4
+   #:*geoip-database*
+   #:geoip
+   #:create-geolite2-database))
 
 (in-package #:geoip/geoip)
 
@@ -30,8 +34,9 @@
 
 (defvar *geoip-database* nil)
 
-(defun geoip (ipv4-address-string)
-  (when (null *geoip-database*)
+(defun geoip (ipv4-address-string &key (database *geoip-database*))
+  (when (and (null database)
+             (null *geoip-database*))
     (setf *geoip-database* (create-geolite2-database)))
   (geoip-lookup-country-ipv4 *geoip-database* (decode-ipv4-address ipv4-address-string)))
 
@@ -60,14 +65,6 @@
 
 ;; GeoLite2
 
-(defvar *geolite2-country-csv-directory*
-  (system-relative-pathname "geoip" "GeoLite2-Country-CSV_20200303/"))
-
-(defvar *geolite2-country-blocks-ipv4-csv-filename*
-  (merge-pathnames
-   (make-pathname :name "GeoLite2-Country-Blocks-IPv4" :type "csv")
-   *geolite2-country-csv-directory*))
-
 (defstruct (geolite2-country-block-ipv4
             (:conc-name cb-))
   network
@@ -79,7 +76,7 @@
   ;; Computed slots
   decoded-network)
 
-(defun read-geolite2-country-blocks-ipv4-csv (&optional (filename *geolite2-country-blocks-ipv4-csv-filename*))
+(defun read-geolite2-country-blocks-ipv4-csv (filename)
   (with-open-file (stream filename :direction :input)
     (read-csv-line stream)
     (coerce
@@ -103,11 +100,6 @@
                       :decoded-network (decode-ipv4-address-range network))))
      'vector)))
 
-(defvar *geolite2-country-locations-csv-filename*
-  (merge-pathnames
-   (make-pathname :name "GeoLite2-Country-Locations-en" :type "csv")
-   *geolite2-country-csv-directory*))
-
 (defstruct (geolite2-country-location
             (:conc-name cl-))
   geoname-id
@@ -118,7 +110,7 @@
   country-name
   is-in-european-union)
 
-(defun read-geolite2-country-locations-csv (&optional (filename *geolite2-country-locations-csv-filename*))
+(defun read-geolite2-country-locations-csv (filename)
   (with-open-file (stream filename :direction :input)
     (read-csv-line stream)
     (coerce
@@ -151,10 +143,17 @@
     :initarg :country-locations
     :reader geolite2-database-country-locations)))
 
-(defun create-geolite2-database ()
-  (make-instance 'geolite2-database
-                 :country-blocks-ipv4 (read-geolite2-country-blocks-ipv4-csv)
-                 :country-locations (read-geolite2-country-locations-csv)))
+(defun create-geolite2-database (&optional directory)
+  (let ((directory (or directory (system-relative-pathname "geoip" "GeoLite2-Country-CSV_20200303/"))))
+    (make-instance 'geolite2-database
+                   :country-blocks-ipv4 (read-geolite2-country-blocks-ipv4-csv
+                                         (merge-pathnames
+                                          (make-pathname :name "GeoLite2-Country-Blocks-IPv4" :type "csv")
+                                          directory))
+                   :country-locations (read-geolite2-country-locations-csv
+                                       (merge-pathnames
+                                        (make-pathname :name "GeoLite2-Country-Locations-en" :type "csv")
+                                        directory)))))
 
 (defmethod cb-network-start ((cb geolite2-country-block-ipv4))
   (first (cb-decoded-network cb)))

@@ -3,7 +3,7 @@
 ;;;; +----------------------------------------------------------------+
 
 (asdf:defsystem #:geoip
-  :description "Convert IP addresses to locations"
+  :description "Return geographical information associated with an IP address."
   :author "death <github.com/death>"
   :license "MIT"
   :class :package-inferred-system
