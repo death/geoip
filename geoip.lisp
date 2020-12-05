@@ -17,5 +17,6 @@
 (defun geoip (ipv4-address-string &key (database *geoip-database*))
   (when (and (null database)
              (null *geoip-database*))
-    (setf *geoip-database* (create-geolite2-database)))
-  (geoip-lookup-country-ipv4 *geoip-database* (decode-ipv4-address ipv4-address-string)))
+    (setf *geoip-database* (create-geolite2-database))
+    (setf database *geoip-database*))
+  (geoip-lookup-country-ipv4 database (decode-ipv4-address ipv4-address-string)))
